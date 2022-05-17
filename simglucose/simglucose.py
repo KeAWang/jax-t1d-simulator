@@ -8,6 +8,8 @@ from collections import namedtuple
 
 # TODO: make sure that all units make sense
 # TODO: make into brax interface
+# TODO: separate out the speed tests into unit tests
+# TODO: make vpatient_params.csv installable via pip
 
 """
 # TODO:
@@ -100,6 +102,8 @@ def step(
 
 
 def t1d_dynamics_np(patient, x, action, params, Dbar):
+    # Original implementation from simglucose
+    # Useful as a reference
     dxdt = np.zeros(13)
     d = action.carbs * 1000  # g -> mg
     insulin = action.insulin * 6000 / patient.BW  # U/min -> pmol/kg/min
@@ -415,116 +419,3 @@ def initialize_patient(key, patient_id, random_init_bg=True):
 
     init_state = jnp.asarray(init_state)
     return patient, init_state, params, unused_params
-
-
-if __name__ == "__main__":
-    key = jax.random.PRNGKey(0)
-
-    key, subkey = jax.random.split(key)
-    patient, init_state, params, unused_params = initialize_patient(key, 0, False)
-
-    basal = patient.u2ss * patient.BW / 6000  # U/min
-    planned_meal = jnp.array(0.0)
-
-    states = []
-    obs = []
-
-    carbs = []
-    insulins = []
-
-    state = init_state
-    t = np.arange(60 * 24)
-    for i in t:
-        ins = basal
-        carb = 0
-        if (i % 100 == 0) and (i < len(t) // 2):
-            carb = 80.0
-            ins = 80.0 / 6.0 + basal
-        controls = Controls(carbs=carb, insulin=ins)
-        carbs.append(carb)
-        insulins.append(ins)
-
-        state, planned_meal = step(patient, state, planned_meal, controls, None, params)
-        obs.append(observe(state, patient.Vg))
-        states.append(state)
-    states = jnp.stack(states)
-    obs = jnp.stack(obs)
-
-    plt.ion()
-    # fig, ax = plt.subplots()
-    # ax.plot(t, states)
-    fig, ax = plt.subplots()
-    ax.plot(t, obs)
-    ax.plot(t, carbs)
-    ax.plot(t, insulins)
-    ax.set(ylim=[0, 400])
-    input("Press any key to exit...")
-
-
-# if __name__ == "__main__":
-#    key = jax.random.PRNGKey(0)
-#
-#    key, subkey = jax.random.split(key)
-#    patient, init_state, params, unused_params = initialize_patient(key, 0, False)
-#
-#    planned_meal = jnp.array(0.0)
-#
-#    controls = Controls(carbs=jnp.array(0.0), insulin=jnp.array(0.0))
-#    state = init_state
-#
-#    carbs = controls.carbs  # CHO
-#    new_planned_meal, to_eat = eat(planned_meal, carbs)
-#    Dbar = to_eat
-#
-#    import time
-#
-#    num_iters = 100
-#    # Compilation
-#    dstate = t1d_dynamics(
-#        patient, state, controls, None, params, to_eat
-#    ).block_until_ready()
-#    start = time.time()
-#    for _ in range(num_iters):
-#        dstate = t1d_dynamics(
-#            patient, state, controls, None, params, to_eat
-#        ).block_until_ready()
-#    end = time.time()
-#    jax_time = (end - start) / num_iters
-#    print("JAX Time elapsed per ODE step:", jax_time)
-#
-#    start = time.time()
-#    for _ in range(num_iters):
-#        dstate_np = t1d_dynamics_np(patient, state, controls, params, Dbar)
-#    end = time.time()
-#    np_time = (end - start) / num_iters
-#    print("Numpy Time elapsed per ODE step:", np_time)
-#
-#    print(f"Speedup factor: {np_time / jax_time:.2f}")
-#
-#    vmap_t1d_dynamics = jax.vmap(t1d_dynamics, (None, 0, None, None, None, None))
-#    num_patients = 100
-#    dstate = vmap_t1d_dynamics(
-#        patient,
-#        jnp.tile(state[None, :], (num_patients, 1)),
-#        controls,
-#        None,
-#        params,
-#        to_eat,
-#    ).block_until_ready()
-#    start = time.time()
-#    for _ in range(num_iters):
-#        dstate = vmap_t1d_dynamics(
-#            patient,
-#            jnp.tile(state[None, :], (num_patients, 1)),
-#            controls,
-#            None,
-#            params,
-#            to_eat,
-#        ).block_until_ready()
-#    end = time.time()
-#    vmap_time = (end - start) / num_iters
-#    print("JAX Time elapsed per vmapped ODE step (100 patients):", vmap_time)
-#    print(
-#        f"Vmap speedup over sequential looping: {num_patients * jax_time / vmap_time: .2f}"
-#    )
-#
