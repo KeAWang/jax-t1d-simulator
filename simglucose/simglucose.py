@@ -1,14 +1,12 @@
 import numpy as np
 import jax
 import jax.numpy as jnp
-import matplotlib.pyplot as plt
 import pandas as pd
 from collections import namedtuple
 
 
 # TODO: make sure that all units make sense
 # TODO: make into brax interface
-# TODO: separate out the speed tests into unit tests
 # TODO: make vpatient_params.csv installable via pip
 
 """
@@ -18,6 +16,9 @@ from collections import namedtuple
 3. initial state distribution, patient parameter distribution, patient profile
 
 """
+
+# DONE
+# TODO: separate out the speed tests into unit tests
 
 SAMPLE_TIME = 1  # min
 EAT_RATE = 5  # g/min CHO
