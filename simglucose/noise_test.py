@@ -25,14 +25,16 @@ interp_f = interp1d(noise_t, eps, kind="cubic")
 noise = interp_f(t)
 
 plt.ion()
-fig, axes = plt.subplots(figsize=(8, 6), nrows=2)
+fig, axes = plt.subplots(figsize=(12, 6), nrows=2, sharex=True)
 ax = axes[0]
-ax.plot(noise_t, eps, "-o", label="sampled eps", alpha=0.2, markersize=3)
-ax.plot(t, noise, "-o", label="cgm noise", alpha=0.2, markersize=3)
+ax.plot(noise_t, e, "-o", label="e_n", alpha=0.5, markersize=3)
+ax.plot(noise_t, eps, "-o", label="eps_n", alpha=0.5, markersize=3)
+ax.plot(t, noise, "-", label="cgm noise (interpolated)", alpha=0.5, markersize=3)
 
 ax = axes[1]
 ax.plot(t, 150 + noise + 75 * np.sin(np.arange(T) / (2 * 3.14 * 2)), label="cgm noisy")
 ax.plot(t, 150 + +75 * np.sin(np.arange(T) / (2 * 3.14 * 2)), label="cgm clean")
 ax.set(ylim=(0, 400))
+ax.set(xlabel="t (minutes)")
 fig.legend()
 input("")
