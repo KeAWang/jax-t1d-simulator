@@ -222,12 +222,16 @@ def t1d_dynamics(
         - Better describes hypoglycemic events compared to the 2008 simulator
     6. The UVA/Padova Type 1 Diabetes Simulator Goes From Single Meal to Single Day
         - Updates T1D sim from single meal to single day
+
+
+    The notation and abbreviations are clarified in
+        Physical Activity into the Meal Glucose–Insulin Model of Type 1 Diabetes: In Silico Studies
     """
     # TODO: assign all at once instead of one at a time
     dstate = jnp.zeros_like(state)
 
     BW = patient.BW  # body weight
-    u2ss = patient.u2ss  # steady state insulin rate per kilogram
+    u2ss = patient.u2ss  # steady state insulin rate per kilogram (pmol / (L * kg))
 
     carbs = controls.carbs  # CHO
     insulin = controls.insulin

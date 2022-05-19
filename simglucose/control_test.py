@@ -10,6 +10,10 @@ patient, init_state, params, unused_params = simglucose.initialize_patient(
     key, 0, False
 )
 
+# TODO: how does basal insulin work? Is it all injected at once? Injected at a regular rate?
+# TODO: what are reasonable ranges for basal and bolus dosages?
+# TODO: what are tests we could do to check on the "realisticness" of our simulator?
+# TODO: what are example patient dosages and profiles? How do we calculate/prescribe dosages?
 basal = patient.u2ss * patient.BW / 6000  # U/min
 planned_meal = jnp.array(0.0)
 
