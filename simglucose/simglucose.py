@@ -71,7 +71,7 @@ def load_patient(patient_id):
     11 - 20: adult#001 - adult#001
     21 - 30: child#001 - child#010
     """
-    patient_params = pd.read_csv("vpatient_params.csv")
+    patient_params = pd.read_csv("simglucose/vpatient_params.csv")
     params = patient_params.iloc[patient_id - 1, :]
     return params
 
