@@ -227,9 +227,6 @@ def t1d_dynamics(
     The notation and abbreviations are clarified in
         Physical Activity into the Meal Glucose–Insulin Model of Type 1 Diabetes: In Silico Studies
     """
-    # TODO: assign all at once instead of one at a time
-    dstate = jnp.zeros_like(state)
-
     BW = patient.BW  # body weight
     u2ss = patient.u2ss  # steady state insulin rate per kilogram (pmol / (L * kg))
 
@@ -267,7 +264,7 @@ def t1d_dynamics(
 
     # Stomach solid
     # d(Q_sto1)/dt
-    dstate = dstate.at[0].set(-params.kmax * state[0] + carbs_mg)
+    dstate0 = -params.kmax * state[0] + carbs_mg
 
     aa = 5 / 2 / (1 - params.b) / Dbar  # same as alpha in original paper
     cc = 5 / 2 / params.d / Dbar  # same as beta in original paper
@@ -280,11 +277,11 @@ def t1d_dynamics(
 
     # stomach liquid
     # d(Q_sto2)/dt
-    dstate = dstate.at[1].set(params.kmax * state[0] - state[1] * kgut)
+    dstate1 = params.kmax * state[0] - state[1] * kgut
 
     # intestine
     # d(Q_gut)/dt
-    dstate = dstate.at[2].set(kgut * state[1] - params.kabs * state[2])
+    dstate2 = kgut * state[1] - params.kabs * state[2]
 
     # Rate of appearance
     Rat = params.f * params.kabs * state[2] / BW
@@ -330,7 +327,7 @@ def t1d_dynamics(
 
     # glucose kinetics
     # plus dextrose IV injection input u[2] if needed
-    dstate = dstate.at[3].set(
+    dstate3 = (
         jnp.maximum(EGPt, 0)
         + Rat
         - Uiit
@@ -338,49 +335,64 @@ def t1d_dynamics(
         - params.k1 * state[3]
         + params.k2 * state[4]
     )
-    dstate = dstate.at[3].multiply(state[3] >= 0.0)
+    dstate3 = dstate3 * (state[3] >= 0.0)
 
     Vmt = params.Vm0 + params.Vmx * state[6]
     Kmt = params.Km0
     Uidt = Vmt * state[4] / (Kmt + state[4])
-    dstate = dstate.at[4].set(-Uidt + params.k1 * state[3] - params.k2 * state[4])
-    dstate = dstate.at[4].multiply(state[4] >= 0.0)
+    dstate4 = -Uidt + params.k1 * state[3] - params.k2 * state[4]
+    dstate4 = dstate4 * (state[4] >= 0.0)
 
     # insulin kinetics
-    dstate = dstate.at[5].set(
+    dstate5 = (
         -(params.m2 + params.m4) * state[5]
         + params.m1 * state[9]
         + params.ka1 * state[10]
         + params.ka2 * state[11]
     )  # plus insulin IV injection u[3] if needed
     It = state[5] / params.Vi
-    dstate = dstate.at[5].multiply(state[5] >= 0.0)
+    dstate5 = dstate5 * (state[5] >= 0.0)
 
     # insulin action on glucose utilization
-    dstate = dstate.at[6].set(-params.p2u * state[6] + params.p2u * (It - params.Ib))
+    dstate6 = -params.p2u * state[6] + params.p2u * (It - params.Ib)
 
     # insulin action on production
-    dstate = dstate.at[7].set(-params.ki * (state[7] - It))
+    dstate7 = -params.ki * (state[7] - It)
 
-    dstate = dstate.at[8].set(-params.ki * (state[8] - state[7]))
+    dstate8 = -params.ki * (state[8] - state[7])
 
     # insulin in the liver (pmol/kg)
-    dstate = dstate.at[9].set(
-        -(params.m1 + params.m30) * state[9] + params.m2 * state[5]
-    )
-    dstate = dstate.at[9].multiply(state[9] >= 0.0)
+    dstate9 = -(params.m1 + params.m30) * state[9] + params.m2 * state[5]
+    dstate9 = dstate9 * (state[9] >= 0.0)
 
     # subcutaneous insulin kinetics
-    dstate = dstate.at[10].set(insulin - (params.ka1 + params.kd) * state[10])
-    dstate = dstate.at[10].multiply(state[10] >= 0.0)
+    dstate10 = insulin - (params.ka1 + params.kd) * state[10]
+    dstate10 = dstate10 * (state[10] >= 0.0)
 
-    dstate = dstate.at[11].set(params.kd * state[10] - params.ka2 * state[11])
-    dstate = dstate.at[11].multiply(state[11] >= 0.0)
+    dstate11 = params.kd * state[10] - params.ka2 * state[11]
+    dstate11 = dstate11 * (state[11] >= 0.0)
 
     # subcutaneous glucose
-    dstate = dstate.at[12].set(-params.ksc * state[12] + params.ksc * state[3])
-    dstate = dstate.at[12].multiply(state[12] >= 0.0)
+    dstate12 = -params.ksc * state[12] + params.ksc * state[3]
+    dstate12 = dstate12 * (state[12] >= 0.0)
 
+    dstate = jnp.stack(
+        [
+            dstate0,
+            dstate1,
+            dstate2,
+            dstate3,
+            dstate4,
+            dstate5,
+            dstate6,
+            dstate7,
+            dstate8,
+            dstate9,
+            dstate10,
+            dstate11,
+            dstate12,
+        ]
+    )
     return dstate
 
 

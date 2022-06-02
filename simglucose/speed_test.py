@@ -3,6 +3,8 @@ import jax
 import jax.numpy as jnp
 import simglucose
 
+jax.config.update("jax_platform_name", "cpu")  # running on CPU is faster than GPU
+
 key = jax.random.PRNGKey(0)
 
 key, subkey = jax.random.split(key)
