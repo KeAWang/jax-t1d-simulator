@@ -24,12 +24,12 @@ Dbar = to_eat
 num_iters = 100
 # Compilation
 dstate = simglucose.t1d_dynamics(
-    patient, state, controls, None, params, to_eat
+    patient, state, controls, params, to_eat
 ).block_until_ready()
 start = time.time()
 for _ in range(num_iters):
     dstate = simglucose.t1d_dynamics(
-        patient, state, controls, None, params, to_eat
+        patient, state, controls, params, to_eat
     ).block_until_ready()
 end = time.time()
 jax_time = (end - start) / num_iters
@@ -44,13 +44,12 @@ print("Numpy Time elapsed per ODE step:", np_time)
 
 print(f"Speedup factor: {np_time / jax_time:.2f}")
 
-vmap_t1d_dynamics = jax.vmap(simglucose.t1d_dynamics, (None, 0, None, None, None, None))
+vmap_t1d_dynamics = jax.vmap(simglucose.t1d_dynamics, (None, 0, None, None, None))
 num_patients = 100
 dstate = vmap_t1d_dynamics(
     patient,
     jnp.tile(state[None, :], (num_patients, 1)),
     controls,
-    None,
     params,
     to_eat,
 ).block_until_ready()
@@ -60,7 +59,6 @@ for _ in range(num_iters):
         patient,
         jnp.tile(state[None, :], (num_patients, 1)),
         controls,
-        None,
         params,
         to_eat,
     ).block_until_ready()

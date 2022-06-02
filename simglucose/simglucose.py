@@ -24,6 +24,7 @@ SAMPLE_TIME = 1  # min
 EAT_RATE = 5  # g/min CHO
 
 Patient = namedtuple("Patient", ["BW", "u2ss", "Vg"])
+PatientState = namedtuple("PatientState", ["patient", "state", "planned_meal"])
 
 Params = namedtuple(
     "Params",
@@ -86,20 +87,22 @@ def eat(planned_meal, new_meal, eat_rate=EAT_RATE):
 
 @jax.jit
 def step(
-    patient: Patient,
-    state,
-    planned_meal,
+    patient_state: PatientState,
     controls: Controls,
-    static_params,
     params: Params,
     step_size=SAMPLE_TIME,
 ):
     # Note we handle food going into stomach differently than simglucose
-    carbs = controls.carbs  # CHO
-    new_planned_meal, to_eat = eat(planned_meal, carbs)
-    dstate = t1d_dynamics(patient, state, controls, static_params, params, to_eat)
-    new_state = state + step_size * dstate
-    return new_state, new_planned_meal
+    carbs = controls.carbs  # CHO in grams
+    new_planned_meal, to_eat = eat(patient_state.planned_meal, carbs)
+    to_eat = to_eat * 1000  # convert from grams to mg
+    dstate = t1d_dynamics(
+        patient_state.patient, patient_state.state, controls, params, to_eat
+    )
+    new_state = patient_state.state + step_size * dstate
+
+    new_patient_state = PatientState(patient_state.patient, new_state, new_planned_meal)
+    return new_patient_state
 
 
 def t1d_dynamics_np(patient, x, action, params, Dbar):
@@ -198,7 +201,6 @@ def t1d_dynamics(
     patient: Patient,
     state,
     controls: Controls,
-    static_params,
     params: Params,
     Dbar,
 ):
@@ -260,7 +262,7 @@ def t1d_dynamics(
     """
     # Glucose in the stomach
     Qsto1, Qsto2 = state[0], state[1]
-    Qsto = Qsto1 + Qsto2
+    Qsto = Qsto1 + Qsto2  # mg
 
     # Stomach solid
     # d(Q_sto1)/dt
@@ -435,4 +437,6 @@ def initialize_patient(key, patient_id, random_init_bg=True):
         init_state[12] = bg_init[2]
 
     init_state = jnp.asarray(init_state)
-    return patient, init_state, params, unused_params
+    planned_meal = jnp.array(0.0)
+    patient_state = PatientState(patient, init_state, planned_meal)
+    return patient_state, params, unused_params

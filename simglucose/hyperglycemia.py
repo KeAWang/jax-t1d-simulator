@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from collections import OrderedDict, namedtuple
 
+jax.config.update("jax_platform_name", "cpu")  # running on CPU is faster than GPU
+
 key = jax.random.PRNGKey(0)
 
 all_obs = []
@@ -12,11 +14,8 @@ all_meals = []
 all_ins = []
 for _ in range(10):
     key, subkey = jax.random.split(key)
-    patient, init_state, params, unused_params = simglucose.initialize_patient(
-        key, 0, False
-    )
-
-    basal = patient.u2ss * patient.BW / 6000  # U/min
+    patient_state, params, unused_params = simglucose.initialize_patient(key, 0, False)
+    basal = patient_state.patient.u2ss * patient_state.patient.BW / 6000  # U/min
     planned_meal = jnp.array(0.0)
 
     num_days = 7
@@ -70,18 +69,15 @@ for _ in range(10):
     states = []
     obs = []
 
-    state = init_state
     t = np.arange(T)
     for i in t:
         ins = ins_times_idx_dense[i]
         carb = meal_times_idx_dense[i]
         controls = simglucose.Controls(carbs=carb, insulin=ins)
 
-        state, planned_meal = simglucose.step(
-            patient, state, planned_meal, controls, None, params
-        )
-        obs.append(simglucose.observe(state, patient.Vg))
-        states.append(state)
+        patient_state = simglucose.step(patient_state, controls, params)
+        obs.append(simglucose.observe(patient_state.state, patient_state.patient.Vg))
+        states.append(patient_state.state)
     states = jnp.stack(states)
     obs = jnp.stack(obs)
 
